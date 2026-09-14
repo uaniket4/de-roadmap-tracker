@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Bot, CheckCircle2, Loader2, MessageCircle, X } from "lucide-react";
 import { ALL_WEEKS, getPhaseForWeek, type Day } from "@/data/roadmap-data";
-import { createLocalAIClient, buildDailyGuidePrompt } from "@/lib/local-ai";
+import { createLocalAIClient, buildDailyGuidePrompt, describeLocalAIError } from "@/lib/local-ai";
 import { DEFAULT_LOCAL_AI_CONFIG, useRoadmapStore } from "@/store/roadmap-store";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,7 @@ export function AIGuideButton({ weekNum, dayIndex, day, compact = false }: { wee
       );
       setGuide(text);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Local AI is unavailable. Check Settings and your local runtime.");
+      setError(describeLocalAIError(cause, localAI));
     } finally {
       setLoading(false);
     }

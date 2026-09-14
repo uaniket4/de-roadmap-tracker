@@ -79,7 +79,7 @@ export default function SettingsPage() {
       <div className="max-w-2xl space-y-4">
         <SettingSection title="Local AI mentor">
           <div className="space-y-4">
-            <p className="text-xs leading-5 text-muted-foreground">Connect a model running on your computer. Requests stay local and are sent directly from this browser to the endpoint you configure.</p>
+            <p className="text-xs leading-5 text-muted-foreground">Connect a model running on your computer. Requests stay local and are sent directly from this browser to the endpoint you configure. The runtime must allow this site&apos;s origin (CORS).</p>
             <AIStatus />
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-xs text-muted-foreground">Provider
@@ -95,9 +95,18 @@ export default function SettingsPage() {
             <label className="block text-xs text-muted-foreground">Endpoint
               <input value={localAI.endpoint} onChange={(e) => updateSettings({ localAI: { ...localAI, endpoint: e.target.value } })} className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground" placeholder="http://localhost:11434" />
             </label>
-            <label className="block text-xs text-muted-foreground">Temperature ({settings.localAI.temperature})
+            <label className="block text-xs text-muted-foreground">Temperature ({localAI.temperature})
               <input type="range" min="0" max="1" step="0.1" value={localAI.temperature} onChange={(e) => updateSettings({ localAI: { ...localAI, temperature: Number(e.target.value) } })} className="mt-2 w-full accent-blue-400" />
             </label>
+            <details className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-medium text-foreground">Troubleshoot browser connection</summary>
+              <div className="mt-3 space-y-2 leading-5">
+                <p>For Ollama on Windows, allow this deployed site before starting Ollama:</p>
+                <code className="block rounded-lg bg-black/30 p-2 text-[11px] text-blue-200">setx OLLAMA_ORIGINS &quot;https://your-project.vercel.app&quot;</code>
+                <p>Then fully quit and restart Ollama. For local development, use <code>http://localhost:3000</code> as the allowed origin. LM Studio has a CORS option in its Developer server settings.</p>
+                <p>Keep the endpoint as <code>http://localhost:11434</code> for Ollama or the base URL shown by your local runtime for an OpenAI-compatible server.</p>
+              </div>
+            </details>
           </div>
         </SettingSection>
 

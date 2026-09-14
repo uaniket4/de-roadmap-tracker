@@ -14,6 +14,17 @@ export interface LocalAIClient {
   healthCheck(): Promise<boolean>;
 }
 
+export function describeLocalAIError(error: unknown, config: LocalAIConfig): string {
+  if (error instanceof TypeError && /fetch/i.test(error.message)) {
+    const origin = typeof window === "undefined" ? "this app" : window.location.origin;
+    if (config.provider === "ollama") {
+      return `The browser could not reach Ollama at ${config.endpoint}. Make sure Ollama is running and allow this app origin (${origin}) with OLLAMA_ORIGINS, then restart Ollama. If this is a Vercel deployment, localhost refers to your own computer, which is expected.`;
+    }
+    return `The browser could not reach the local OpenAI-compatible server at ${config.endpoint}. Start the server, enable CORS for ${origin}, and confirm the endpoint is the server base URL (not a chat-completions URL).`;
+  }
+  return error instanceof Error ? error.message : "Local AI is unavailable. Check Settings and your local runtime.";
+}
+
 function endpointFor(config: LocalAIConfig) {
   return config.endpoint.replace(/\/+$/, "");
 }
