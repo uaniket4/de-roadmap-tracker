@@ -89,7 +89,7 @@ export default function SettingsPage() {
                 </select>
               </label>
               <label className="text-xs text-muted-foreground">Model
-                <input value={localAI.model} onChange={(e) => updateSettings({ localAI: { ...localAI, model: e.target.value } })} className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground" placeholder="qwen3-coder" />
+                <input value={localAI.model} onChange={(e) => updateSettings({ localAI: { ...localAI, model: e.target.value } })} className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground" placeholder="qwen3.5:9b" />
               </label>
             </div>
             <label className="block text-xs text-muted-foreground">Endpoint

@@ -8,7 +8,7 @@ import type { LocalAIConfig } from "@/lib/local-ai";
 export const DEFAULT_LOCAL_AI_CONFIG: LocalAIConfig = {
   provider: "ollama",
   endpoint: "http://localhost:11434",
-  model: "qwen3-coder",
+  model: "qwen3.5:9b",
   temperature: 0.2,
 };
 
@@ -392,6 +392,9 @@ export const useRoadmapStore = create<RoadmapState>()(
             localAI: {
               ...DEFAULT_LOCAL_AI_CONFIG,
               ...persisted?.settings?.localAI,
+              model: persisted?.settings?.localAI?.model === "qwen3-coder"
+                ? DEFAULT_LOCAL_AI_CONFIG.model
+                : persisted?.settings?.localAI?.model || DEFAULT_LOCAL_AI_CONFIG.model,
             },
           },
         };
