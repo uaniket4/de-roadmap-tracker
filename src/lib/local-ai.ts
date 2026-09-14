@@ -14,12 +14,28 @@ export interface LocalAIClient {
   healthCheck(): Promise<boolean>;
 }
 
+class LocalAIRequestError extends Error {
+  constructor(public readonly status: number, public readonly detail: string) {
+    super(`Local AI request failed (${status})`);
+  }
+}
+
 export function describeLocalAIError(error: unknown, config: LocalAIConfig): string {
+  if (error instanceof LocalAIRequestError) {
+    if (error.status === 404 && config.provider === "ollama") {
+      return `Ollama was reached, but it returned 404 for model "${config.model}". Run "ollama list" to see installed models, then either set the exact model name in Settings or run "ollama pull ${config.model}". Keep the endpoint at http://localhost:11434 (without /api/generate).${error.detail ? ` Runtime response: ${error.detail}` : ""}`;
+    }
+    if (error.status === 404 && config.provider === "openai-compatible") {
+      return `The OpenAI-compatible server was reached, but its route was not found. Set Endpoint to the server base URL, not /v1/chat/completions. The app adds /v1/chat/completions automatically.${error.detail ? ` Runtime response: ${error.detail}` : ""}`;
+    }
+    return `Local AI request failed (${error.status}).${error.detail ? ` Runtime response: ${error.detail}` : ""}`;
+  }
   if (error instanceof TypeError && /fetch/i.test(error.message)) {
     const origin = typeof window === "undefined" ? "this app" : window.location.origin;
     if (config.provider === "ollama") {
       return `The browser could not reach Ollama at ${config.endpoint}. Make sure Ollama is running and allow this app origin (${origin}) with OLLAMA_ORIGINS, then restart Ollama. If this is a Vercel deployment, localhost refers to your own computer, which is expected.`;
     }
+
     return `The browser could not reach the local OpenAI-compatible server at ${config.endpoint}. Start the server, enable CORS for ${origin}, and confirm the endpoint is the server base URL (not a chat-completions URL).`;
   }
   return error instanceof Error ? error.message : "Local AI is unavailable. Check Settings and your local runtime.";
@@ -45,7 +61,10 @@ export function createLocalAIClient(config: LocalAIConfig): LocalAIClient {
           ),
         }
       );
-      if (!response.ok) throw new Error(`Local AI request failed (${response.status})`);
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new LocalAIRequestError(response.status, detail.slice(0, 240));
+      }
       const data = await response.json() as { response?: string; choices?: { message?: { content?: string } }[] };
       const text = config.provider === "ollama" ? data.response : data.choices?.[0]?.message?.content;
       if (!text) throw new Error("Local AI returned an empty response");
