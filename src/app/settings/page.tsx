@@ -8,9 +8,10 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { AppShell } from "@/components/layout/app-shell";
-import { useRoadmapStore } from "@/store/roadmap-store";
+import { DEFAULT_LOCAL_AI_CONFIG, useRoadmapStore } from "@/store/roadmap-store";
 import { showToast } from "@/components/providers/toast-provider";
 import { cn } from "@/lib/utils";
+import { AIStatus } from "@/components/ai/ai-guide";
 
 const ACCENT_COLORS = [
   { id: "blue", label: "Ocean Blue", color: "#378ADD" },
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stats = getStats();
+  const localAI = settings.localAI || DEFAULT_LOCAL_AI_CONFIG;
 
   const handleExport = () => {
     const data = exportData();
@@ -75,6 +77,30 @@ export default function SettingsPage() {
       </div>
 
       <div className="max-w-2xl space-y-4">
+        <SettingSection title="Local AI mentor">
+          <div className="space-y-4">
+            <p className="text-xs leading-5 text-muted-foreground">Connect a model running on your computer. Requests stay local and are sent directly from this browser to the endpoint you configure.</p>
+            <AIStatus />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-xs text-muted-foreground">Provider
+                <select value={localAI.provider} onChange={(e) => updateSettings({ localAI: { ...localAI, provider: e.target.value as "ollama" | "openai-compatible" } })} className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground">
+                  <option value="ollama">Ollama</option>
+                  <option value="openai-compatible">OpenAI-compatible</option>
+                </select>
+              </label>
+              <label className="text-xs text-muted-foreground">Model
+                <input value={localAI.model} onChange={(e) => updateSettings({ localAI: { ...localAI, model: e.target.value } })} className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground" placeholder="qwen3-coder" />
+              </label>
+            </div>
+            <label className="block text-xs text-muted-foreground">Endpoint
+              <input value={localAI.endpoint} onChange={(e) => updateSettings({ localAI: { ...localAI, endpoint: e.target.value } })} className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground" placeholder="http://localhost:11434" />
+            </label>
+            <label className="block text-xs text-muted-foreground">Temperature ({settings.localAI.temperature})
+              <input type="range" min="0" max="1" step="0.1" value={localAI.temperature} onChange={(e) => updateSettings({ localAI: { ...localAI, temperature: Number(e.target.value) } })} className="mt-2 w-full accent-blue-400" />
+            </label>
+          </div>
+        </SettingSection>
+
         {/* Theme */}
         <SettingSection title="Appearance">
           <div className="space-y-4">

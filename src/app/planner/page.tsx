@@ -14,6 +14,7 @@ import { useRoadmapStore, type DayStatus } from "@/store/roadmap-store";
 import { PHASES, ALL_WEEKS, getPhaseForWeek, type Week, type Day } from "@/data/roadmap-data";
 import { getPhaseColor, cn } from "@/lib/utils";
 import { showToast } from "@/components/providers/toast-provider";
+import { AIGuideButton } from "@/components/ai/ai-guide";
 
 // ─── Day card ─────────────────────────────────────────────────────────────────
 function DayCard({ day, dayIndex, weekNum, phaseColor }: {
@@ -87,6 +88,9 @@ function DayCard({ day, dayIndex, weekNum, phaseColor }: {
                 skip-ok
               </span>
             )}
+          </div>
+          <div className="mb-2">
+            <AIGuideButton weekNum={weekNum} dayIndex={dayIndex} day={day} compact />
           </div>
           <p className={cn("text-sm font-medium leading-snug", status === "done" && "line-through text-muted-foreground")}>
             {day.title}

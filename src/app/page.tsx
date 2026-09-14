@@ -10,6 +10,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ALL_WEEKS, PHASES, getPhaseForWeek } from "@/data/roadmap-data";
 import { useRoadmapStore } from "@/store/roadmap-store";
 import { formatMinutes, getRoadmapPosition, formatTime, cn } from "@/lib/utils";
+import { AIGuideButton } from "@/components/ai/ai-guide";
 
 function parseMinutes(time: string) {
   const hours = parseFloat(time);
@@ -105,6 +106,7 @@ function MissionCard({ weekNum, dayIndex, date }: { weekNum: number; dayIndex: n
             </div>
             {day.deliverable && <span className="flex items-center gap-1.5 rounded-full bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-300"><Star className="h-3.5 w-3.5" /> Deliverable</span>}
           </div>
+          <div className="mt-4"><AIGuideButton weekNum={weekNum} dayIndex={dayIndex} day={day} compact /></div>
         </div>
         <div className="space-y-4 p-5 sm:p-7">
           <div className="space-y-2">

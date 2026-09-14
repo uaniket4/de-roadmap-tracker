@@ -13,6 +13,7 @@ import { useRoadmapStore, type DayStatus } from "@/store/roadmap-store";
 import { ALL_WEEKS, getPhaseForWeek, type Day } from "@/data/roadmap-data";
 import { cn } from "@/lib/utils";
 import { showToast } from "@/components/providers/toast-provider";
+import { AIGuideButton } from "@/components/ai/ai-guide";
 
 // ─── Individual day card (needs its own state) ────────────────────────────────
 function DayRow({ day, dayIndex, weekNum, phaseColor }: {
@@ -70,6 +71,9 @@ function DayRow({ day, dayIndex, weekNum, phaseColor }: {
           <p className={cn("text-base font-semibold leading-tight", status === "done" && "line-through text-muted-foreground")}>
             {day.title}
           </p>
+          <div className="mt-2">
+            <AIGuideButton weekNum={weekNum} dayIndex={dayIndex} day={day} compact />
+          </div>
           <div className="mt-2 space-y-1">
             {day.tasks.map((task, ti) => {
               const isDSA = task.toLowerCase().includes("dsa") || task.toLowerCase().includes("leetcode");

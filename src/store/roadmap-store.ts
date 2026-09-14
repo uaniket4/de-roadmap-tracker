@@ -3,6 +3,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ALL_WEEKS, PHASES } from "@/data/roadmap-data";
 import { calculateStreak } from "@/lib/utils";
+import type { LocalAIConfig } from "@/lib/local-ai";
+
+export const DEFAULT_LOCAL_AI_CONFIG: LocalAIConfig = {
+  provider: "ollama",
+  endpoint: "http://localhost:11434",
+  model: "qwen3-coder",
+  temperature: 0.2,
+};
 
 export type DayStatus = "done" | "skipped" | "reduced" | "in_progress" | null;
 
@@ -53,6 +61,7 @@ export interface Resource {
 export interface UserSettings {
   theme: "dark" | "light" | "system";
   accentColor: "blue" | "violet" | "emerald" | "orange" | "rose";
+  localAI: LocalAIConfig;
 }
 
 export interface Stats {
@@ -115,6 +124,7 @@ export const useRoadmapStore = create<RoadmapState>()(
       settings: {
         theme: "dark",
         accentColor: "blue",
+        localAI: DEFAULT_LOCAL_AI_CONFIG,
       },
       activePhase: "p1",
       activeWeek: null,
@@ -371,6 +381,21 @@ export const useRoadmapStore = create<RoadmapState>()(
     }),
     {
       name: "de-roadmap-tracker-v1",
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<RoadmapState> | undefined;
+        return {
+          ...currentState,
+          ...persisted,
+          settings: {
+            ...currentState.settings,
+            ...persisted?.settings,
+            localAI: {
+              ...DEFAULT_LOCAL_AI_CONFIG,
+              ...persisted?.settings?.localAI,
+            },
+          },
+        };
+      },
     }
   )
 );
