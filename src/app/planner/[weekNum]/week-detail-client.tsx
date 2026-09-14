@@ -34,11 +34,14 @@ function DayRow({ day, dayIndex, weekNum, phaseColor }: {
     if (next === "done") showToast(`${day.d} marked done! 🎉`, "success");
   };
 
-  const bgClass = {
+  const statusClasses: Record<string, string> = {
     done: "bg-emerald-500/10 border-emerald-500/20",
     skipped: "bg-amber-500/10 border-amber-500/20",
+    reduced: "bg-blue-500/10 border-blue-500/20",
+    in_progress: "bg-violet-500/10 border-violet-500/20",
     null: "bg-white/3 border-white/8",
-  }[status || "null"];
+  };
+  const bgClass = statusClasses[status || "null"];
 
   return (
     <motion.div
@@ -195,12 +198,11 @@ function WeekNoteEditor({
 // ─── Main client component ────────────────────────────────────────────────────
 export function WeekDetailClient({ weekNum }: { weekNum: number }) {
   const week = ALL_WEEKS.find((w) => w.w === weekNum);
+  const { dayProgress, weekNotes, setWeekNote } = useRoadmapStore();
   if (!week) return notFound();
 
   const phase = getPhaseForWeek(weekNum);
   const phaseColor = phase?.color || "#378ADD";
-
-  const { dayProgress, weekNotes, setWeekNote } = useRoadmapStore();
 
   const done = week.days.filter((_, di) => dayProgress[`w${weekNum}_d${di}`]?.status === "done").length;
   const pct = Math.round((done / week.days.length) * 100);

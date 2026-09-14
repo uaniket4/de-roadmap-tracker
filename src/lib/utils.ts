@@ -90,3 +90,26 @@ export function getLevelFromXP(xp: number): number {
 export function getXPProgressInLevel(xp: number): number {
   return xp % 1000;
 }
+
+export const ROADMAP_START_DATE = "2026-06-01";
+
+export function getRoadmapPosition(date = new Date()): { weekNum: number; dayIndex: number } | null {
+  const start = new Date(`${ROADMAP_START_DATE}T00:00:00`);
+  const target = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const dayOffset = Math.floor((target.getTime() - start.getTime()) / 86400000);
+  if (dayOffset < 0 || dayOffset >= 39 * 7) return null;
+  return {
+    weekNum: Math.floor(dayOffset / 7) + 1,
+    dayIndex: dayOffset % 7,
+  };
+}
+
+export function formatMinutes(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (!hours) return `${mins}m`;
+  if (!mins) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}

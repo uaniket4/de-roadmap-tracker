@@ -4,7 +4,26 @@ import { persist } from "zustand/middleware";
 import { ALL_WEEKS, PHASES } from "@/data/roadmap-data";
 import { calculateStreak } from "@/lib/utils";
 
-export type DayStatus = "done" | "skipped" | null;
+export type DayStatus = "done" | "skipped" | "reduced" | "in_progress" | null;
+
+export interface DailyCommitment {
+  date: string;
+  locked: boolean;
+  targetMinutes: number;
+  minimumMinutes: number;
+  startedAt?: string;
+  completedAt?: string;
+  mode?: "full" | "minimum";
+}
+
+export interface CurrentSession {
+  date: string;
+  weekNum: number;
+  dayIndex: number;
+  startedAt: string;
+  elapsedSeconds: number;
+  paused: boolean;
+}
 
 export interface DayProgress {
   status: DayStatus;
@@ -57,6 +76,8 @@ interface RoadmapState {
   searchQuery: string;
   filterPhase: string | null;
   sidebarOpen: boolean;
+  dailyCommitment: DailyCommitment | null;
+  currentSession: CurrentSession | null;
 
   // Actions
   setDayStatus: (weekNum: number, dayIndex: number, status: DayStatus) => void;
@@ -70,6 +91,14 @@ interface RoadmapState {
   setSearchQuery: (q: string) => void;
   setFilterPhase: (phaseId: string | null) => void;
   setSidebarOpen: (open: boolean) => void;
+  lockDailyCommitment: (commitment: Omit<DailyCommitment, "locked">) => void;
+  adjustDailyCommitment: () => void;
+  startFocusSession: (weekNum: number, dayIndex: number, date: string) => void;
+  pauseFocusSession: (elapsedSeconds: number) => void;
+  updateFocusSessionElapsed: (elapsedSeconds: number) => void;
+  resumeFocusSession: () => void;
+  finishFocusSession: (elapsedSeconds: number) => void;
+  setMinimumDay: (date: string, weekNum: number, dayIndex: number) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   resetProgress: () => void;
   getStats: () => Stats;
@@ -92,6 +121,8 @@ export const useRoadmapStore = create<RoadmapState>()(
       searchQuery: "",
       filterPhase: null,
       sidebarOpen: true,
+      dailyCommitment: null,
+      currentSession: null,
 
       setDayStatus: (weekNum, dayIndex, status) => {
         const key = `w${weekNum}_d${dayIndex}`;
@@ -153,6 +184,100 @@ export const useRoadmapStore = create<RoadmapState>()(
       setSearchQuery: (q) => set({ searchQuery: q }),
       setFilterPhase: (phaseId) => set({ filterPhase: phaseId }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+      lockDailyCommitment: (commitment) => set({
+        dailyCommitment: { ...commitment, locked: true },
+      }),
+
+      adjustDailyCommitment: () => set({ dailyCommitment: null }),
+
+      startFocusSession: (weekNum, dayIndex, date) => {
+        const now = new Date().toISOString();
+        set((state) => ({
+          currentSession: {
+            date,
+            weekNum,
+            dayIndex,
+            startedAt: now,
+            elapsedSeconds: 0,
+            paused: false,
+          },
+          dayProgress: {
+            ...state.dayProgress,
+            [`w${weekNum}_d${dayIndex}`]: {
+              ...state.dayProgress[`w${weekNum}_d${dayIndex}`],
+              status: "in_progress",
+              updatedAt: now,
+            },
+          },
+          dailyCommitment: state.dailyCommitment?.date === date
+            ? { ...state.dailyCommitment, startedAt: state.dailyCommitment.startedAt || now }
+            : state.dailyCommitment,
+        }));
+      },
+
+      pauseFocusSession: (elapsedSeconds) => set((state) => ({
+        currentSession: state.currentSession
+          ? { ...state.currentSession, elapsedSeconds, paused: true }
+          : null,
+      })),
+
+      updateFocusSessionElapsed: (elapsedSeconds) => set((state) => ({
+        currentSession: state.currentSession
+          ? { ...state.currentSession, elapsedSeconds }
+          : null,
+      })),
+
+      resumeFocusSession: () => set((state) => ({
+        currentSession: state.currentSession
+          ? { ...state.currentSession, paused: false }
+          : null,
+      })),
+
+      finishFocusSession: (elapsedSeconds) => {
+        const session = get().currentSession;
+        if (!session) return;
+        const now = new Date().toISOString();
+        const hours = Math.round((elapsedSeconds / 3600) * 100) / 100;
+        set((state) => ({
+          currentSession: null,
+          dayProgress: {
+            ...state.dayProgress,
+            [`w${session.weekNum}_d${session.dayIndex}`]: {
+              ...state.dayProgress[`w${session.weekNum}_d${session.dayIndex}`],
+              status: "done",
+              actualTime: hours,
+              updatedAt: now,
+            },
+          },
+          dailyCommitment: state.dailyCommitment?.date === session.date
+            ? { ...state.dailyCommitment, completedAt: now }
+            : state.dailyCommitment,
+        }));
+      },
+
+      setMinimumDay: (date, weekNum, dayIndex) => {
+        const now = new Date().toISOString();
+        set((state) => ({
+          dailyCommitment: {
+            date,
+            locked: true,
+            targetMinutes: 30,
+            minimumMinutes: 30,
+            startedAt: now,
+            mode: "minimum",
+          },
+          dayProgress: {
+            ...state.dayProgress,
+            [`w${weekNum}_d${dayIndex}`]: {
+              ...state.dayProgress[`w${weekNum}_d${dayIndex}`],
+              status: "reduced",
+              actualTime: 0.5,
+              updatedAt: now,
+            },
+          },
+        }));
+      },
 
       updateSettings: (settings) => {
         set((state) => ({ settings: { ...state.settings, ...settings } }));
@@ -224,8 +349,8 @@ export const useRoadmapStore = create<RoadmapState>()(
       },
 
       exportData: () => {
-        const { dayProgress, weekNotes, resources } = get();
-        return JSON.stringify({ dayProgress, weekNotes, resources, exportedAt: new Date().toISOString() });
+        const { dayProgress, weekNotes, resources, dailyCommitment, currentSession } = get();
+        return JSON.stringify({ dayProgress, weekNotes, resources, dailyCommitment, currentSession, exportedAt: new Date().toISOString() });
       },
 
       importData: (json) => {
@@ -235,6 +360,8 @@ export const useRoadmapStore = create<RoadmapState>()(
             dayProgress: data.dayProgress || {},
             weekNotes: data.weekNotes || {},
             resources: data.resources || [],
+            dailyCommitment: data.dailyCommitment || null,
+            currentSession: data.currentSession || null,
           });
           return true;
         } catch {
