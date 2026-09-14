@@ -21,6 +21,9 @@ class LocalAIRequestError extends Error {
 }
 
 export function describeLocalAIError(error: unknown, config: LocalAIConfig): string {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return `Qwen3.5 9B did not respond within 3 minutes. The model may still be loading or your computer may be out of memory. Try the request again after running "ollama run ${config.model}" once in a terminal.`;
+  }
   if (error instanceof LocalAIRequestError) {
     if (error.status === 404 && config.provider === "ollama") {
       return `Ollama was reached, but it returned 404 for model "${config.model}". Run "ollama list" to see installed models, then either set the exact model name in Settings or run "ollama pull ${config.model}". Keep the endpoint at http://localhost:11434 (without /api/generate).${error.detail ? ` Runtime response: ${error.detail}` : ""}`;
@@ -49,18 +52,26 @@ export function createLocalAIClient(config: LocalAIConfig): LocalAIClient {
   return {
     async generate(prompt) {
       const base = endpointFor(config);
-      const response = await fetch(
-        config.provider === "ollama" ? `${base}/api/generate` : `${base}/v1/chat/completions`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            config.provider === "ollama"
-              ? { model: config.model, prompt, stream: false, options: { temperature: config.temperature } }
-              : { model: config.model, temperature: config.temperature, messages: [{ role: "user", content: prompt }] }
-          ),
-        }
-      );
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 180000);
+      let response: Response;
+      try {
+        response = await fetch(
+          config.provider === "ollama" ? `${base}/api/generate` : `${base}/v1/chat/completions`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify(
+              config.provider === "ollama"
+                ? { model: config.model, prompt, stream: false, options: { temperature: config.temperature } }
+                : { model: config.model, temperature: config.temperature, messages: [{ role: "user", content: prompt }] }
+            ),
+          }
+        );
+      } finally {
+        window.clearTimeout(timeout);
+      }
       if (!response.ok) {
         const detail = await response.text();
         throw new LocalAIRequestError(response.status, detail.slice(0, 240));
